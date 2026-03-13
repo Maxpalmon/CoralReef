@@ -187,6 +187,6 @@ void ACoralGrowthManager::ExportStatsToCSV()
 
 FString ACoralGrowthManager::GetSimulationStats()
 {
-    return FString::Printf(TEXT("Шаг: %d\nЖивых полипов: %d\nОбъем скелета: %d\nВсего вокселей: %d"),
+    return FString::Printf(TEXT("Step: %d\nLive polyps: %d\nScelet volume: %d\nTotal voxels count: %d"),
         CurrentStep, LivingPolypCount, SkeletonVoxelCount, TotalVoxelCount);
 }
