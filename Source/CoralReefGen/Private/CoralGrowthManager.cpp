@@ -8,7 +8,7 @@ ACoralGrowthManager::ACoralGrowthManager()
     MeshComponent = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("VoxelMesh"));
     RootComponent = MeshComponent;
 
-    // Включаем поддержку Custom Data (0-R, 1-G, 2-B)
+    // Add Custom Data support (0-R, 1-G, 2-B)
     MeshComponent->NumCustomDataFloats = 3;
 }
 
@@ -28,10 +28,10 @@ void ACoralGrowthManager::SpawnSeed(FIntVector Pos, int32 ColonyID)
     T.SetLocation(FVector(Pos) * VoxelSize);
     int32 NewIdx = MeshComponent->AddInstance(T);
 
-    // Добавляем первого агента
+    //Add first agent
     ActiveAgents.Add(FCoralAgent(Pos, FIntVector(0, 0, 1), ColonyID, NewIdx));
 
-    // Красим в живой цвет
+    //Color in Living Color
     MeshComponent->SetCustomDataValue(NewIdx, 0, LivingColor.R);
     MeshComponent->SetCustomDataValue(NewIdx, 1, LivingColor.G);
     MeshComponent->SetCustomDataValue(NewIdx, 2, LivingColor.B);
@@ -63,7 +63,7 @@ void ACoralGrowthManager::SimulationStep()
     TArray<FCoralAgent> NextGeneration;
     TArray<FIntVector> Directions = { {1,0,0}, {-1,0,0}, {0,1,0}, {0,-1,0}, {0,0,1}, {0,0,-1} };
 
-    // 1. Статистика и перекраска активных агентов в цвет скелета
+    // 1.Statistics and recoloring active agents in skeleton color
     SkeletonVoxelCount += ActiveAgents.Num();
     for (const FCoralAgent& OldAgent : ActiveAgents)
     {
@@ -75,11 +75,11 @@ void ACoralGrowthManager::SimulationStep()
         }
     }
 
-    // 2. Основной цикл симуляции
+    // 2.Main simulation cycle
     for (const FCoralAgent& Agent : ActiveAgents)
     {
-        // --- РАДИАЛЬНАЯ ОПТИМИЗАЦИЯ ПЛОТНОСТИ ---
-        // Проверяем заполненность пространства вокруг (куб 3x3x3)
+        // Radial density optimisation
+        // Check fullfilness ou space around(cube 3x3x3)
         int32 DensityCheck = 0;
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
@@ -90,10 +90,10 @@ void ACoralGrowthManager::SimulationStep()
                 }
             }
         }
-        // Если вокруг слишком тесно (порог 12 из 26), полип "задыхается" и перестает расти
+        // If there are many polyps around, polyp dies
         if (DensityCheck >= 12) continue;
 
-        // --- ПРОВЕРКА НА ЗАТЕНЕНИЕ (СВЕТ) ---
+        // Shadow check
         int32 OverheadObstacles = 0;
         for (int32 z = 1; z <= 2; z++) {
             if (VoxelStorage->GetVoxel(Agent.Position + FIntVector(0, 0, z)).Type != EVoxelType::Empty)
@@ -101,7 +101,7 @@ void ACoralGrowthManager::SimulationStep()
         }
         if (OverheadObstacles >= LightThreshold) continue;
 
-        // --- ПОИСК ДОСТУПНЫХ НАПРАВЛЕНИЙ ---
+        // Searching valid directions
         TArray<FIntVector> ValidDirs;
         for (const FIntVector& Dir : Directions)
         {
@@ -120,7 +120,7 @@ void ACoralGrowthManager::SimulationStep()
 
         if (ValidDirs.Num() == 0) continue;
 
-        // --- СОРТИРОВКА (Инерция + Фототропизм + Течение) ---
+        //SORTING (Inertia + Phototropism + Flow)
         ValidDirs.Sort([&](const FIntVector& A, const FIntVector& B) {
             FVector DirA = FVector(A).GetSafeNormal();
             FVector DirB = FVector(B).GetSafeNormal();
@@ -135,7 +135,7 @@ void ACoralGrowthManager::SimulationStep()
             return ScoreA > ScoreB;
             });
 
-        // --- РОСТ ---
+        //Growth
         float Chance = (TotalVoxelCount < 15) ? 1.0f : GrowthProbability;
         int32 MaxNewBranches = (FMath::FRand() < BranchingChance) ? 2 : 1;
         int32 BranchesCreated = 0;
@@ -155,7 +155,7 @@ void ACoralGrowthManager::SimulationStep()
 
                 NextGeneration.Add(FCoralAgent(NewPos, ChosenDir, Agent.ColonyID, NewIdx));
 
-                // Красим новый полип в живой цвет
+                //Color new polyp in living color
                 MeshComponent->SetCustomDataValue(NewIdx, 0, LivingColor.R);
                 MeshComponent->SetCustomDataValue(NewIdx, 1, LivingColor.G);
                 MeshComponent->SetCustomDataValue(NewIdx, 2, LivingColor.B);
@@ -169,7 +169,7 @@ void ACoralGrowthManager::SimulationStep()
     ActiveAgents = NextGeneration;
     LivingPolypCount = ActiveAgents.Num();
 
-    // Авто-экспорт в CSV каждый шаг для удобства сбора данных
+    //Auto export to CSV every step 
     ExportStatsToCSV();
 }
 

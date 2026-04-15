@@ -20,7 +20,7 @@ struct FCoralAgent
     UPROPERTY()
     int32 ColonyID;
 
-    // Добавляем индекс инстанса, чтобы знать, какой кубик перекрашивать
+    // Add InstanceIndex parameter for coloring voxel information
     UPROPERTY()
     int32 InstanceIndex;
 
@@ -38,22 +38,20 @@ class CORALREEFGEN_API ACoralGrowthManager : public AActor
 public:
     ACoralGrowthManager();
 
-    // Добавь это в секцию public:
-
-// --- ТАЙМЕР ---
+// Timer
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Automation")
-    bool bIsAutoGrowth = false; // Вкл/выкл авто-рост
+    bool bIsAutoGrowth = false; //Switching autogrowth
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Automation")
-    float StepDelay = 0.1f; // Задержка между шагами
+    float StepDelay = 0.1f; //Delay between steps
 
     FTimerHandle GrowthTimerHandle;
 
-    // --- ОПТИМИЗАЦИЯ (СВЕТ) ---
+    // Light optimisation
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Growth Settings")
-    int32 LightThreshold = 2; // Если сверху больше 2-х соседей, полип "затенен" и умирает
+    int32 LightThreshold = 2; // If there are more then 2 neighbors with voxel, polyp is in shadow and dies
 
-    // --- ЭКСПОРТ ---
+    // Export
     UFUNCTION(BlueprintCallable, Category = "Coral|Data")
     void ExportStatsToCSV();
 
@@ -61,24 +59,24 @@ public:
     void ToggleAutoGrowth(bool bEnable);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Growth Settings")
-    FVector CurrentDirection = FVector(1.0f, 0.0f, 0.0f); // Направление течения
+    FVector CurrentDirection = FVector(1.0f, 0.0f, 0.0f); 
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Growth Settings", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-    float CurrentStrength = 0.2f; // Сила влияния течения
+    float CurrentStrength = 0.2f; //Strength of flaw impact
 
-    // --- НОВАЯ СТАТИСТИКА ---
+    // Statistics
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Stats")
-    int32 SkeletonVoxelCount = 0; // Объем скелета (мертвые воксели)
+    int32 SkeletonPolypCount = 0;
 
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Stats")
-    int32 LivingPolypCount = 0; // Количество живых полипов
+    int32 LivingPolypCount = 0;
 
-    // Визуализация живых и мертвых полипов
+    //Visualisation of live and dead polyps
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Visual")
-    FLinearColor LivingColor = FLinearColor(0.1f, 0.8f, 0.2f); // Зеленый (живой)
+    FLinearColor LivingColor = FLinearColor(0.1f, 0.8f, 0.2f); 
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Visual")
-    FLinearColor SkeletonColor = FLinearColor(0.8f, 0.8f, 0.8f); // Серый (скелет)
+    FLinearColor SkeletonColor = FLinearColor(0.8f, 0.8f, 0.8f);
 
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coral|Visual")
@@ -89,15 +87,13 @@ public:
 
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Simulation")
     TArray<FCoralAgent> ActiveAgents;
-
-    // --- ПАРАМЕТРЫ СТАТИСТИКИ ---
+    
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Stats")
     int32 TotalVoxelCount = 0;
 
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Stats")
     int32 CurrentStep = 0;
-
-    // --- ПАРАМЕТРЫ РОСТА ---
+    
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Growth Settings")
     float GrowthProbability = 0.3f;
 
@@ -115,8 +111,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Settings")
     float VoxelSize = 100.0f;
-
-    // --- МЕТОДЫ ---
+    
     UFUNCTION(BlueprintCallable, Category = "Coral|Methods")
     void SimulationStep();
 

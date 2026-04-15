@@ -2,7 +2,7 @@
 
 FIntVector UVoxelStorage::WorldToChunkCoords(FIntVector WorldPos) const
 {
-    // Используем побитовый сдвиг или деление для определения координат чанка
+    //Use byte shift or division for determination of chunk coordinates 
     auto FloorDiv = [](int32 a, int32 b) {
         return (a >= 0) ? (a / b) : ((a - b + 1) / b);
         };
@@ -11,7 +11,7 @@ FIntVector UVoxelStorage::WorldToChunkCoords(FIntVector WorldPos) const
 
 int32 UVoxelStorage::WorldToIndex(FIntVector WorldPos) const
 {
-    // Получаем локальные координаты внутри чанка (0-7)
+    //Get local coordinates inside a chunk (0 - 7)
     auto GetLocal = [](int32 pos) {
         int32 res = pos % 8;
         return (res < 0) ? (res + 8) : res;
@@ -28,7 +28,7 @@ void UVoxelStorage::SetVoxel(FIntVector WorldPos, FVoxelData NewData)
 {
     FIntVector ChunkCoords = WorldToChunkCoords(WorldPos);
 
-    // Если чанка нет, TMap создаст его автоматически при обращении через FindOrAdd
+    //If there is no chunk, TMap will create it auto with FindOrAdd()
     FVoxelChunk& Chunk = ChunkMap.FindOrAdd(ChunkCoords);
     Chunk.Data[WorldToIndex(WorldPos)] = NewData;
 }
@@ -42,5 +42,5 @@ FVoxelData UVoxelStorage::GetVoxel(FIntVector WorldPos)
         return Chunk->Data[WorldToIndex(WorldPos)];
     }
 
-    return FVoxelData(); // Возвращаем пустой воксель, если чанк не найден
+    return FVoxelData(); //Return empty voxel if chunk is not find
 }

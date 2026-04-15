@@ -1,19 +1,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "VoxelData.h" // Подключаем нашу структуру
+#include "VoxelData.h" 
 #include "VoxelStorage.generated.h"
 
-/** Структура одного чанка (блока вокселей 8x8x8) */
+//Chunk structure
 USTRUCT()
 struct FVoxelChunk
 {
     GENERATED_BODY()
-
-    // Размер стороны блока. 8 — оптимально для баланса памяти и скорости.
+    
     static const int32 Size = 8;
 
-    // Массив данных вокселей (8 * 8 * 8 = 512 вокселей в блоке)
+    //Voxel Data Array
     FVoxelData Data[Size * Size * Size];
 };
 
@@ -23,22 +22,22 @@ class CORALREEFGEN_API UVoxelStorage : public UObject
     GENERATED_BODY()
 
 public:
-    /** Хранилище: Координаты чанка (FIntVector) -> Данные чанка */
+    //Chunk coordinates
     UPROPERTY()
     TMap<FIntVector, FVoxelChunk> ChunkMap;
 
-    /** Установить воксель по глобальным координатам */
+    //Set voxel by global coordinates
     UFUNCTION(BlueprintCallable, Category = "CoralVoxel")
     void SetVoxel(FIntVector WorldPos, FVoxelData NewData);
 
-    /** Получить воксель по глобальным координатам */
+    //Get voxel by global coordinates
     UFUNCTION(BlueprintCallable, Category = "CoralVoxel")
     FVoxelData GetVoxel(FIntVector WorldPos);
 
 private:
-    /** Перевод мировых координат в координаты чанка */
+    //Transform world coordinates in chunk coordinates
     FIntVector WorldToChunkCoords(FIntVector WorldPos) const;
 
-    /** Перевод мировых координат в индекс внутри массива чанка */
+    //Transform world coordinates in index inside chunk array
     int32 WorldToIndex(FIntVector WorldPos) const;
 };
