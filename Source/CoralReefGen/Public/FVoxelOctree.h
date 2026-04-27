@@ -2,6 +2,10 @@
 
 #include "CoreMinimal.h"
 
+// Forward declaration - говорим, что такая структура существует.
+// Определение (содержимое) компилятор возьмет из .cpp через #include "CoralGrowthManager.h"
+struct FSpeciesParams; 
+
 struct FVoxelOctreeNode {
 	FVoxelOctreeNode* Children[8];
 	int32 SpeciesID;
@@ -19,12 +23,14 @@ struct FVoxelOctreeNode {
 	}
 };
 
-class CORALREEFGEN_API FVoxelOctree {
+class FVoxelOctree {
 public:
 	FVoxelOctree(int32 InInitialSize);
 	~FVoxelOctree();
 
-	void SetVoxel(FIntVector GlobalPos, int32 SpeciesID);
+	// Передаем параметры видов по ссылке
+	void SetVoxel(FIntVector GlobalPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList);
+    
 	int32 GetSpeciesAt(FIntVector GlobalPos) const;
 	bool IsOccupied(FIntVector GlobalPos) const;
 
@@ -39,5 +45,6 @@ private:
 	int32 GetOldRootIndexInNewRoot(const FIntVector& OldOffset, const FIntVector& NewOffset) const;
 	int32 GetOctantIndex(const FIntVector& Target, const FIntVector& MinBound, int32 Size) const;
     
-	void InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, int32 Size, int32 Depth, FIntVector TargetPos, int32 SpeciesID);
+	// В рекурсию также прокидываем массив параметров
+	void InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, int32 Size, int32 Depth, FIntVector TargetPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList);
 };

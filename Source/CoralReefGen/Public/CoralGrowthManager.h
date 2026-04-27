@@ -10,6 +10,18 @@
 USTRUCT(BlueprintType)
 struct FSpeciesParams {
     GENERATED_BODY()
+    
+    UPROPERTY(EditAnywhere, Category = "Coral")
+    FString Name;
+
+    UPROPERTY(EditAnywhere, Category = "Coral")
+    FColor DisplayColor;
+
+    UPROPERTY(EditAnywhere, Category = "Coral", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float Aggression; // Шанс вытеснить соседа
+
+    FSpeciesParams() : Name("Default"), DisplayColor(FColor::Green), Aggression(0.5f) {}
+    
     UPROPERTY(EditAnywhere) float Alpha; // Инерция
     UPROPERTY(EditAnywhere) float Beta;  // Свет
     UPROPERTY(EditAnywhere) int32 AggressionLevel; // Сила вида
@@ -88,16 +100,15 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Visual")
     FLinearColor SkeletonColor = FLinearColor(0.8f, 0.8f, 0.8f);
-
-
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Growth Settings")
+    TArray<FSpeciesParams> SpeciesList;
+    
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coral|Visual")
     UInstancedStaticMeshComponent* MeshComponent;
 
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Data")
     UVoxelStorage* VoxelStorage;
-    
-    UPROPERTY(BlueprintReadOnly, Category = "Coral|Simulation")
-    TArray<FCoralAgent> ActiveAgents;
     
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Stats")
     int32 TotalVoxelCount = 0;
@@ -134,9 +145,25 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    
     void EndPlay(EEndPlayReason::Type EndPlayReason);
+    
+    // Метод для отрисовки вокселя
+    void SpawnVoxelVisual(FIntVector Pos, int32 SpeciesID);
+
+        
+    UPROPERTY(BlueprintReadOnly, Category = "Coral|Simulation")
+    TArray<FCoralAgent> ActiveAgents;
+    
+    // Убедись, что компонент объявлен
+    UPROPERTY(VisibleAnywhere, Category = "Coral|Visual")
+    UInstancedStaticMeshComponent* VoxelMeshComponent;
+    
 private:
+    void InitializeSpecies();
+    
     // В класс менеджера
-    TArray<FSpeciesParams> SpeciesList;
+    //TArray<FSpeciesParams> SpeciesList;
     FVoxelOctree* GlobalOctree; // Параллельное хранилище для SVO
 };
+

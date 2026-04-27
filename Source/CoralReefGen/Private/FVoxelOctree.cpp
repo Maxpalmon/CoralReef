@@ -1,8 +1,8 @@
 #include "FVoxelOctree.h"
+#include "CoralGrowthManager.h"
 
 FVoxelOctree::FVoxelOctree(int32 InInitialSize) {
     CurrentWorldSize = InInitialSize;
-    // Начинаем из центра, чтобы координаты (0,0,0) были внутри
     TreeOffset = FIntVector(-InInitialSize / 2); 
     MaxDepth = FMath::CeilLogTwo(InInitialSize);
     Root = new FVoxelOctreeNode();
@@ -12,13 +12,12 @@ FVoxelOctree::~FVoxelOctree() {
     delete Root;
 }
 
-void FVoxelOctree::SetVoxel(FIntVector GlobalPos, int32 SpeciesID) {
-    // 1. Если точка вне текущего куба, расширяем дерево вверх
+void FVoxelOctree::SetVoxel(FIntVector GlobalPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList) {
     while (!IsInside(GlobalPos)) {
         ExpandTree(GlobalPos);
     }
-    // 2. Вставляем воксель
-    InsertRecursive(Root, TreeOffset, CurrentWorldSize, 0, GlobalPos, SpeciesID);
+    // ИСПРАВЛЕНО: Теперь передаем 0 (начальная глубина) и SpeciesList
+    InsertRecursive(Root, TreeOffset, CurrentWorldSize, 0, GlobalPos, SpeciesID, SpeciesList);
 }
 
 int32 FVoxelOctree::GetSpeciesAt(FIntVector GlobalPos) const {
@@ -77,10 +76,21 @@ void FVoxelOctree::ExpandTree(FIntVector TargetPos) {
     MaxDepth++; 
 }
 
-void FVoxelOctree::InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, int32 Size, int32 Depth, FIntVector TargetPos, int32 SpeciesID) {
+void FVoxelOctree::InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, int32 Size, int32 Depth, FIntVector TargetPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList) {
     if (Depth == MaxDepth) {
-        Node->bIsOccupied = true;
-        Node->SpeciesID = SpeciesID;
+        if (Node->bIsOccupied) {
+            // МЕЖВИДОВАЯ БОРЬБА: Сравниваем AggressionLevel из твоего БП
+            int32 CurrentAggro = SpeciesList.IsValidIndex(Node->SpeciesID) ? SpeciesList[Node->SpeciesID].AggressionLevel : 0;
+            int32 NewAggro = SpeciesList.IsValidIndex(SpeciesID) ? SpeciesList[SpeciesID].AggressionLevel : 0;
+
+            // Если новый полип сильнее, он вытесняет старый
+            if (NewAggro > CurrentAggro) {
+                Node->SpeciesID = SpeciesID;
+            }
+        } else {
+            Node->bIsOccupied = true;
+            Node->SpeciesID = SpeciesID;
+        }
         Node->bIsLeaf = true;
         return;
     }
@@ -98,7 +108,8 @@ void FVoxelOctree::InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, i
     if (ChildIdx & 2) ChildNodePos.Y += Half;
     if (ChildIdx & 4) ChildNodePos.Z += Half;
 
-    InsertRecursive(Node->Children[ChildIdx], ChildNodePos, Half, Depth + 1, TargetPos, SpeciesID);
+    // Рекурсивный вызов с увеличением глубины
+    InsertRecursive(Node->Children[ChildIdx], ChildNodePos, Half, Depth + 1, TargetPos, SpeciesID, SpeciesList);
 }
 
 bool FVoxelOctree::IsInside(FIntVector GlobalPos) const {
