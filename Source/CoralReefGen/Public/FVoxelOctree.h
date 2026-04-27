@@ -2,17 +2,16 @@
 
 #include "CoreMinimal.h"
 
-// Forward declaration - говорим, что такая структура существует.
-// Определение (содержимое) компилятор возьмет из .cpp через #include "CoralGrowthManager.h"
 struct FSpeciesParams; 
 
 struct FVoxelOctreeNode {
 	FVoxelOctreeNode* Children[8];
 	int32 SpeciesID;
+	int32 InstanceIndex; // Храним индекс меша для перекрашивания
 	bool bIsOccupied;
 	bool bIsLeaf;
 
-	FVoxelOctreeNode() : SpeciesID(-1), bIsOccupied(false), bIsLeaf(true) {
+	FVoxelOctreeNode() : SpeciesID(-1), InstanceIndex(-1), bIsOccupied(false), bIsLeaf(true) {
 		for (int32 i = 0; i < 8; ++i) Children[i] = nullptr;
 	}
 
@@ -28,8 +27,8 @@ public:
 	FVoxelOctree(int32 InInitialSize);
 	~FVoxelOctree();
 
-	// Передаем параметры видов по ссылке
-	void SetVoxel(FIntVector GlobalPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList);
+	// Добавлен аргумент InInstanceIndex
+	void SetVoxel(FIntVector GlobalPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList, class UInstancedStaticMeshComponent* MeshComp, int32 InInstanceIndex = -1);
     
 	int32 GetSpeciesAt(FIntVector GlobalPos) const;
 	bool IsOccupied(FIntVector GlobalPos) const;
@@ -42,9 +41,7 @@ private:
 
 	void ExpandTree(FIntVector TargetPos);
 	bool IsInside(FIntVector GlobalPos) const;
-	int32 GetOldRootIndexInNewRoot(const FIntVector& OldOffset, const FIntVector& NewOffset) const;
 	int32 GetOctantIndex(const FIntVector& Target, const FIntVector& MinBound, int32 Size) const;
     
-	// В рекурсию также прокидываем массив параметров
-	void InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, int32 Size, int32 Depth, FIntVector TargetPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList);
+	void InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, int32 Size, int32 Depth, FIntVector TargetPos, int32 SpeciesID, const TArray<FSpeciesParams>& SpeciesList, class UInstancedStaticMeshComponent* MeshComp, int32 InInstanceIndex);
 };

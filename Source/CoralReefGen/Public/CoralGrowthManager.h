@@ -159,6 +159,7 @@ protected:
     UPROPERTY(VisibleAnywhere, Category = "Coral|Visual")
     UInstancedStaticMeshComponent* VoxelMeshComponent;
     
+    int32 SpawnVoxelVisualWithReturn(FIntVector Pos, int32 SpeciesID);
 private:
     void InitializeSpecies();
     
