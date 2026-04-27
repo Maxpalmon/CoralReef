@@ -4,7 +4,17 @@
 #include "GameFramework/Actor.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "VoxelStorage.h"
+#include "FVoxelOctree.h"
 #include "CoralGrowthManager.generated.h"
+
+USTRUCT(BlueprintType)
+struct FSpeciesParams {
+    GENERATED_BODY()
+    UPROPERTY(EditAnywhere) float Alpha; // Инерция
+    UPROPERTY(EditAnywhere) float Beta;  // Свет
+    UPROPERTY(EditAnywhere) int32 AggressionLevel; // Сила вида
+};
+
 
 USTRUCT(BlueprintType)
 struct FCoralAgent
@@ -29,6 +39,7 @@ struct FCoralAgent
         : Position(Pos), Direction(Dir), ColonyID(ID), InstanceIndex(InIndex) {
     }
 };
+
 
 UCLASS()
 class CORALREEFGEN_API ACoralGrowthManager : public AActor
@@ -84,7 +95,7 @@ public:
 
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Data")
     UVoxelStorage* VoxelStorage;
-
+    
     UPROPERTY(BlueprintReadOnly, Category = "Coral|Simulation")
     TArray<FCoralAgent> ActiveAgents;
     
@@ -123,4 +134,9 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    void EndPlay(EEndPlayReason::Type EndPlayReason);
+private:
+    // В класс менеджера
+    TArray<FSpeciesParams> SpeciesList;
+    FVoxelOctree* GlobalOctree; // Параллельное хранилище для SVO
 };
