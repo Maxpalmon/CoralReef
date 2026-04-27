@@ -1,91 +1,124 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "FVoxelOctree.h"
 
-FVoxelOctree::FVoxelOctree(int32 InWorldSize):WorldSize(InWorldSize)
-{
-	MaxDepth = FMath::CeilLogTwo(MaxDepth);
-	Root = new FVoxelOctreeNode();
+FVoxelOctree::FVoxelOctree(int32 InInitialSize) {
+    CurrentWorldSize = InInitialSize;
+    // Начинаем из центра, чтобы координаты (0,0,0) были внутри
+    TreeOffset = FIntVector(-InInitialSize / 2); 
+    MaxDepth = FMath::CeilLogTwo(InInitialSize);
+    Root = new FVoxelOctreeNode();
 }
 
-FVoxelOctree::~FVoxelOctree()
-{
-	delete Root;
+FVoxelOctree::~FVoxelOctree() {
+    delete Root;
 }
 
-int32 FVoxelOctree::GetSpeciesAt(FIntVector Pos) const 
-{
-	if (!Root) return -1;
+void FVoxelOctree::SetVoxel(FIntVector GlobalPos, int32 SpeciesID) {
+    // 1. Если точка вне текущего куба, расширяем дерево вверх
+    while (!IsInside(GlobalPos)) {
+        ExpandTree(GlobalPos);
+    }
+    // 2. Вставляем воксель
+    InsertRecursive(Root, TreeOffset, CurrentWorldSize, 0, GlobalPos, SpeciesID);
+}
 
-	FVoxelOctreeNode* Current = Root;
-	FIntVector NodePos(0);
-	int32 Size = WorldSize;
+int32 FVoxelOctree::GetSpeciesAt(FIntVector GlobalPos) const {
+    if (!Root || !IsInside(GlobalPos)) return -1;
 
-	// Спускаемся по дереву до максимальной глубины
-	for (int32 Depth = 0; Depth < MaxDepth; ++Depth)
-	{
-		int32 Half = Size / 2;
-		int32 ChildIdx = GetOctantIndex(Pos, NodePos, Half);
+    FVoxelOctreeNode* Current = Root;
+    FIntVector NodePos = TreeOffset;
+    int32 Size = CurrentWorldSize;
 
-		// Если ветки не существует — вокселя там точно нет
-		if (!Current->Children[ChildIdx]) 
-		{
-			return -1;
-		}
+    for (int32 Depth = 0; Depth < MaxDepth; ++Depth) {
+        int32 Half = Size / 2;
+        int32 ChildIdx = GetOctantIndex(GlobalPos, NodePos, Half);
 
-		// Переходим глубже
-		Current = Current->Children[ChildIdx];
+        if (!Current->Children[ChildIdx]) return -1;
+
+        Current = Current->Children[ChildIdx];
         
-		// Обновляем позицию текущего куба для следующего шага
-		if (ChildIdx & 1) NodePos.X += Half;
-		if (ChildIdx & 2) NodePos.Y += Half;
-		if (ChildIdx & 4) NodePos.Z += Half;
-		Size = Half;
-	}
+        if (ChildIdx & 1) NodePos.X += Half;
+        if (ChildIdx & 2) NodePos.Y += Half;
+        if (ChildIdx & 4) NodePos.Z += Half;
+        Size = Half;
+    }
 
-	// Мы дошли до "листа" (вокселя). Возвращаем его владельца.
-	return Current->bIsOccupied ? Current->SpeciesID : -1;
+    return Current->bIsOccupied ? Current->SpeciesID : -1;
 }
 
-bool FVoxelOctree::IsOccupied(FIntVector Pos) const 
-{
-	// Если поиск вернул любой ID, кроме -1, значит там воксель
-	return GetSpeciesAt(Pos) != -1;
+bool FVoxelOctree::IsOccupied(FIntVector GlobalPos) const {
+    return GetSpeciesAt(GlobalPos) != -1;
 }
 
-int32 FVoxelOctree::GetOctantIndex(const FIntVector& Target, const FIntVector& NodePos, int32 HalfSize) const {
-	int32 Index = 0;
-	if (Target.X >= NodePos.X + HalfSize) Index |= 1;
-	if (Target.Y >= NodePos.Y + HalfSize) Index |= 2;
-	if (Target.Z >= NodePos.Z + HalfSize) Index |= 4;
-	return Index;
-}
+void FVoxelOctree::ExpandTree(FIntVector TargetPos) {
+    FIntVector OldOffset = TreeOffset;
+    int32 OldSize = CurrentWorldSize;
+    FVoxelOctreeNode* OldRoot = Root;
 
-void FVoxelOctree::SetVoxel(FIntVector Pos, int32 SpeciesID) {
-	InsertRecursive(Root, FIntVector(0), WorldSize, 0, Pos, SpeciesID);
+    // Удваиваем размер
+    int32 NewSize = OldSize * 2;
+    FIntVector NewOffset = OldOffset;
+
+    // Определяем направление расширения
+    if (TargetPos.X < OldOffset.X) NewOffset.X -= OldSize;
+    if (TargetPos.Y < OldOffset.Y) NewOffset.Y -= OldSize;
+    if (TargetPos.Z < OldOffset.Z) NewOffset.Z -= OldSize;
+
+    // Создаем новый корень (теперь он не лист)
+    Root = new FVoxelOctreeNode();
+    Root->bIsLeaf = false;
+
+    // Помещаем старое дерево в один из новых октантов
+    int32 OldRootIdx = GetOldRootIndexInNewRoot(OldOffset, NewOffset);
+    Root->Children[OldRootIdx] = OldRoot;
+
+    // Обновляем параметры
+    CurrentWorldSize = NewSize;
+    TreeOffset = NewOffset;
+    MaxDepth++; 
 }
 
 void FVoxelOctree::InsertRecursive(FVoxelOctreeNode* Node, FIntVector NodePos, int32 Size, int32 Depth, FIntVector TargetPos, int32 SpeciesID) {
-	if (Depth == MaxDepth) {
-		// Логика конкуренции: если занято чужим видом, можно "перекрасить" (захватить)
-		Node->bIsOccupied = true;
-		Node->SpeciesID = SpeciesID;
-		return;
-	}
+    if (Depth == MaxDepth) {
+        Node->bIsOccupied = true;
+        Node->SpeciesID = SpeciesID;
+        Node->bIsLeaf = true;
+        return;
+    }
 
-	int32 Half = Size / 2;
-	int32 ChildIdx = GetOctantIndex(TargetPos, NodePos, Half);
+    Node->bIsLeaf = false;
+    int32 Half = Size / 2;
+    int32 ChildIdx = GetOctantIndex(TargetPos, NodePos, Half);
 
-	if (!Node->Children[ChildIdx]) {
-		Node->Children[ChildIdx] = new FVoxelOctreeNode();
-	}
+    if (!Node->Children[ChildIdx]) {
+        Node->Children[ChildIdx] = new FVoxelOctreeNode();
+    }
 
-	FIntVector ChildOffset(
-		(ChildIdx & 1) ? Half : 0,
-		(ChildIdx & 2) ? Half : 0,
-		(ChildIdx & 4) ? Half : 0
-	);
+    FIntVector ChildNodePos = NodePos;
+    if (ChildIdx & 1) ChildNodePos.X += Half;
+    if (ChildIdx & 2) ChildNodePos.Y += Half;
+    if (ChildIdx & 4) ChildNodePos.Z += Half;
 
-	InsertRecursive(Node->Children[ChildIdx], NodePos + ChildOffset, Half, Depth + 1, TargetPos, SpeciesID);
+    InsertRecursive(Node->Children[ChildIdx], ChildNodePos, Half, Depth + 1, TargetPos, SpeciesID);
+}
+
+bool FVoxelOctree::IsInside(FIntVector GlobalPos) const {
+    return (GlobalPos.X >= TreeOffset.X && GlobalPos.X < TreeOffset.X + CurrentWorldSize) &&
+           (GlobalPos.Y >= TreeOffset.Y && GlobalPos.Y < TreeOffset.Y + CurrentWorldSize) &&
+           (GlobalPos.Z >= TreeOffset.Z && GlobalPos.Z < TreeOffset.Z + CurrentWorldSize);
+}
+
+int32 FVoxelOctree::GetOctantIndex(const FIntVector& Target, const FIntVector& MinBound, int32 HalfSize) const {
+    int32 Index = 0;
+    if (Target.X >= MinBound.X + HalfSize) Index |= 1;
+    if (Target.Y >= MinBound.Y + HalfSize) Index |= 2;
+    if (Target.Z >= MinBound.Z + HalfSize) Index |= 4;
+    return Index;
+}
+
+int32 FVoxelOctree::GetOldRootIndexInNewRoot(const FIntVector& OldOffset, const FIntVector& NewOffset) const {
+    int32 Index = 0;
+    if (OldOffset.X > NewOffset.X) Index |= 1;
+    if (OldOffset.Y > NewOffset.Y) Index |= 2;
+    if (OldOffset.Z > NewOffset.Z) Index |= 4;
+    return Index;
 }
