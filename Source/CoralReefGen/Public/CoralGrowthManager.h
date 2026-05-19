@@ -77,7 +77,7 @@ public:
 
     // Ограничения и оптимизация освещения
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Growth Settings")
-    int32 LightThreshold = 2; 
+    float LightThreshold = 0.2f; 
 
     // Вектор текущего направления течения/роста по умолчанию
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Coral|Growth Settings")
@@ -151,7 +151,7 @@ public:
     void SpawnSeed(FIntVector Pos, int32 ColonyID);
 
     UFUNCTION(BlueprintCallable, Category = "Coral|Data")
-    void ExportStatsToCSV();
+    void ExportStatsToCSV(float StepTimeMS);
 
     UFUNCTION(BlueprintCallable, Category = "Coral|Stats")
     FString GetSimulationStats();
